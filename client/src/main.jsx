@@ -27,15 +27,18 @@ function App() {
   const [paused, setPaused] = useState(false);
   const [timer, setTimer] = useState(0);
   const [timerEndsAt, setTimerEndsAt] = useState(null);
+  const [roundId, setRoundId] = useState(null);
+  const [submittedMine, setSubmittedMine] = useState(false);
 
   useEffect(() => {
     if (!ws) return;
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === 'room_update') { setRoom(msg.room); if (msg.room?.timerEndsAt) setTimerEndsAt(msg.room.timerEndsAt); }
-      if (msg.type === 'round_started') { setQuestion(msg.question); setRevealed(null); setWaiting(false); setAnswer(''); setTimerEndsAt(msg.timerEndsAt); }
+      if (msg.type === 'round_started') { setQuestion(msg.question); setRevealed(null); setWaiting(false); setAnswer(''); setTimerEndsAt(msg.timerEndsAt); setRoundId(msg.roundId); setSubmittedMine(!!msg.submitted?.[playerId]); }
       if (msg.type === 'waiting_partner') setWaiting(true);
-      if (msg.type === 'answers_revealed') { setRevealed(msg); setWaiting(false); setTimerEndsAt(null); }
+      if (msg.type === 'answers_revealed') { setRevealed(msg); setWaiting(false); setTimerEndsAt(null); setSubmittedMine(false); }
+      if (msg.type === 'answer_accepted') setSubmittedMine(true);
       if (msg.type === 'discussion_state') setPaused(msg.value);
     };
   }, [ws]);
@@ -81,7 +84,7 @@ function App() {
   };
 
   const myIdx = useMemo(() => room?.players?.findIndex((p) => p.id === playerId), [room, playerId]);
-  const canSubmit = question?.type === 'scale' ? true : !!String(answer).trim();
+  const canSubmit = !submittedMine && (question?.type === 'scale' ? true : !!String(answer).trim());
 
   if (!code) {
     return <div className='layout'>
@@ -109,7 +112,7 @@ function App() {
     <div className='glass topbar'>
       <div><b>Комната {code}</b><small>{room?.status === 'waiting' ? 'Ожидание второго игрока…' : 'Вы в игре'}</small></div>
       <div><b>{MODES[room?.mode || mode]?.emoji} {MODES[room?.mode || mode]?.title}</b><small>Совпадения: {room?.stats?.matches || 0}/{room?.stats?.total || 0}</small></div>
-      <div><b>Участники</b><small>{room?.players?.map((p) => p.name).join(' • ') || '—'}</small></div>
+      <div><b>Участники</b><small>{room?.players?.map((p) => `${p.name}${p.online ? ' 🟢' : ' ⚪'}`).join(' • ') || '—'}</small></div>
     </div>
 
     {question && !revealed && <div className='glass card in'>
@@ -120,7 +123,7 @@ function App() {
       {question.type === 'scale' && <div><input type='range' min='1' max='10' value={answer || 5} onChange={(e)=>setAnswer(e.target.value)} /><p>Оценка: <b>{answer || 5}</b>/10</p></div>}
       {(question.type === 'open' || question.type === 'guess') && <textarea value={answer} onChange={(e)=>setAnswer(e.target.value)} placeholder='Ваш ответ...' />}
       <div className='row'>
-        <button className='primary' onClick={()=>ws.send(JSON.stringify({ type: 'submit_answer', answer: question.type === 'scale' ? String(answer || 5) : answer.trim() }))} disabled={!canSubmit}>Ответить</button>
+        <button className='primary' onClick={()=>ws.send(JSON.stringify({ type: 'submit_answer', roundId, answer: question.type === 'scale' ? String(answer || 5) : answer.trim() }))} disabled={!canSubmit}>{submittedMine ? 'Ответ принят' : 'Ответить'}</button>
         <button onClick={()=>ws.send(JSON.stringify({type:'skip_question'}))}>Пропустить</button>
       </div>
       {waiting && <div className='waiting'>Партнёр отвечает…</div>}
