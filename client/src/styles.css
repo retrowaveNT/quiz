@@ -1,0 +1,21 @@
+:root{--bg:#090b1a;--card:#12172fcc;--text:#eef1ff;--muted:#a6afd6;--accent:#7a5cff;--accent2:#f857a6}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--text);background:radial-gradient(circle at 20% 0%,#273467 0%,var(--bg) 45%)}
+.layout{max-width:760px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px;min-height:100vh}
+.glass{background:var(--card);backdrop-filter:blur(10px);border:1px solid #ffffff22;border-radius:20px;padding:16px;box-shadow:0 10px 40px #00000033}
+.hero h1{margin:0 0 6px}.hero p,.topbar small,.foot{color:var(--muted)}
+input,textarea,button{width:100%;border-radius:12px;border:none;padding:12px 14px;font-size:15px}
+input,textarea{background:#0f1430;color:#fff} textarea{min-height:110px;resize:vertical}
+button{background:#2b3567;color:#fff;cursor:pointer;transition:.22s transform,.22s background}
+button:hover{transform:translateY(-1px)} .primary{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.modeGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.modeCard{text-align:left}.modeCard small{display:block;color:var(--muted);margin-top:4px}.modeCard.selected{outline:2px solid var(--accent2)}
+.divider{text-align:center;color:var(--muted);margin:8px 0}
+.topbar{display:flex;justify-content:space-between;gap:8px}.topbar div{display:flex;flex-direction:column}
+.card h2{margin-top:6px}.badge{display:inline-block;background:#ffffff1a;padding:6px 10px;border-radius:999px;font-size:12px}
+.timer{height:8px;background:#ffffff22;border-radius:99px;overflow:hidden}.timer>div{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .25s linear}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.active{background:#f857a6}
+.row{display:flex;gap:8px}.row button{flex:1}.waiting{margin-top:8px;color:#ffcf86;animation:pulse 1.1s infinite}
+.answer{padding:10px;background:#0f1430;border-radius:12px;margin:6px 0}.answer span{color:var(--muted);font-size:13px}.answer p{margin:6px 0 0}
+.in{animation:in .35s ease}.foot{text-align:center}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}} @keyframes pulse{50%{opacity:.5}}
+@media (max-width:640px){.modeGrid,.options{grid-template-columns:1fr}.topbar{flex-direction:column}}
