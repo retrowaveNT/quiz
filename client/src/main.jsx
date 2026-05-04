@@ -40,6 +40,19 @@ function App() {
     };
   }, [ws]);
 
+
+  useEffect(() => {
+    const saved = localStorage.getItem('couples_quiz_session');
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed?.code && parsed?.playerId) {
+        if (parsed.name) setName(parsed.name);
+        connectWs(parsed.code, parsed.playerId);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (!timerEndsAt) return setTimer(0);
     const syncTimer = () => setTimer(Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000)));
@@ -52,6 +65,7 @@ function App() {
     const socket = new WebSocket(WS_URL);
     socket.onopen = () => socket.send(JSON.stringify({ type: 'bind', code: c, playerId: p }));
     setWs(socket); setCode(c); setPlayerId(p);
+    localStorage.setItem('couples_quiz_session', JSON.stringify({ code: c, playerId: p, name }));
   };
 
   const createRoom = async () => {
@@ -95,6 +109,7 @@ function App() {
     <div className='glass topbar'>
       <div><b>Комната {code}</b><small>{room?.status === 'waiting' ? 'Ожидание второго игрока…' : 'Вы в игре'}</small></div>
       <div><b>{MODES[room?.mode || mode]?.emoji} {MODES[room?.mode || mode]?.title}</b><small>Совпадения: {room?.stats?.matches || 0}/{room?.stats?.total || 0}</small></div>
+      <div><b>Участники</b><small>{room?.players?.map((p) => p.name).join(' • ') || '—'}</small></div>
     </div>
 
     {question && !revealed && <div className='glass card in'>

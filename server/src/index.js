@@ -33,6 +33,17 @@ const roomState = (room) => ({
   stats: room.stats
 });
 
+
+const sendCurrentRound = (ws, room) => {
+  if (!room.currentQuestion) return;
+  ws.send(JSON.stringify({
+    type: 'round_started',
+    question: room.currentQuestion,
+    round: room.round,
+    timerEndsAt: room.timerEndsAt
+  }));
+};
+
 const broadcast = (room, payload) => {
   room.players.forEach((p) => p.ws?.readyState === 1 && p.ws.send(JSON.stringify(payload)));
 };
@@ -81,6 +92,11 @@ wss.on('connection', (ws) => {
       player.ws = ws;
       session = { code: msg.code, playerId: msg.playerId };
       ws.send(JSON.stringify({ type: 'room_update', room: roomState(room) }));
+      sendCurrentRound(ws, room);
+      if (Object.keys(room.answers || {}).length === 2) {
+        ws.send(JSON.stringify({ type: 'answers_revealed', answers: room.answers, stats: room.stats, question: room.currentQuestion }));
+      }
+      broadcast(room, { type: 'room_update', room: roomState(room) });
     }
 
     const room = rooms.get(session.code);
@@ -92,6 +108,7 @@ wss.on('connection', (ws) => {
         const [a, b] = room.players.map((p) => room.answers[p.id]);
         room.stats.total += 1;
         if (String(a).toLowerCase() === String(b).toLowerCase()) room.stats.matches += 1;
+        room.timerEndsAt = null;
         broadcast(room, { type: 'answers_revealed', answers: room.answers, stats: room.stats, question: room.currentQuestion });
       } else {
         broadcast(room, { type: 'waiting_partner', playerId: session.playerId });
@@ -122,6 +139,7 @@ setInterval(() => {
         if (!room.answers[p.id]) room.answers[p.id] = '⏱️ Время вышло';
       });
       broadcast(room, { type: 'answers_revealed', answers: room.answers, stats: room.stats, question: room.currentQuestion, timeout: true });
+      room.timerEndsAt = null;
     }
   }
 }, 1000);
