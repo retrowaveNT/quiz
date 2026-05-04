@@ -15,7 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const rooms = new Map();
-const answerTimeout = 30;
+const defaultAnswerTimeout = 30;
 
 const randomCode = () => nanoid(6).toUpperCase();
 const pickQuestion = (mode) => {
@@ -31,6 +31,7 @@ const roomState = (room) => ({
   round: room.round,
   roundId: room.roundId,
   timerEndsAt: room.timerEndsAt,
+  answerTimeoutSec: room.answerTimeoutSec,
   stats: room.stats,
   submitted: room.submitted
 });
@@ -43,6 +44,7 @@ const sendCurrentRound = (ws, room) => {
     round: room.round,
     roundId: room.roundId,
     timerEndsAt: room.timerEndsAt,
+  answerTimeoutSec: room.answerTimeoutSec,
     submitted: room.submitted
   }));
 };
@@ -58,13 +60,14 @@ const beginRound = (room) => {
   room.answers = {};
   room.submitted = {};
   room.revealed = false;
-  room.timerEndsAt = Date.now() + answerTimeout * 1000;
+  room.timerEndsAt = room.answerTimeoutSec ? Date.now() + room.answerTimeoutSec * 1000 : null;
   broadcast(room, {
     type: 'round_started',
     question: room.currentQuestion,
     round: room.round,
     roundId: room.roundId,
     timerEndsAt: room.timerEndsAt,
+  answerTimeoutSec: room.answerTimeoutSec,
     submitted: room.submitted
   });
   broadcast(room, { type: 'room_update', room: roomState(room) });
@@ -92,7 +95,7 @@ const revealAnswers = (room, timeout = false) => {
 
 app.get('/health', (_, res) => res.json({ ok: true, questions: QUESTIONS.length }));
 app.post('/rooms', (req, res) => {
-  const { name, mode = 'fun' } = req.body;
+  const { name, mode = 'fun', answerTimeoutSec = defaultAnswerTimeout } = req.body;
   const code = randomCode();
   const playerId = nanoid();
   rooms.set(code, {
@@ -108,7 +111,8 @@ app.post('/rooms', (req, res) => {
     revealed: false,
     countedForRound: false,
     currentQuestion: null,
-    timerEndsAt: null
+    timerEndsAt: null,
+    answerTimeoutSec: Number(answerTimeoutSec) > 0 ? Number(answerTimeoutSec) : null
   });
   res.json({ code, playerId });
 });

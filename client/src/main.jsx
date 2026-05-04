@@ -5,6 +5,14 @@ import './styles.css';
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 const WS_URL = (import.meta.env.VITE_WS_URL || window.location.origin).replace('http', 'ws');
 
+const TIMER_OPTIONS = [
+  { value: 15, label: '15 сек' },
+  { value: 30, label: '30 сек' },
+  { value: 45, label: '45 сек' },
+  { value: 60, label: '60 сек' },
+  { value: 0, label: 'Без лимита' }
+];
+
 const MODES = {
   fun: { title: 'Fun', emoji: '😄', desc: 'Смешные и лёгкие вопросы' },
   spicy: { title: 'Spicy', emoji: '🔥', desc: 'Флирт и провокация без перегиба' },
@@ -27,6 +35,7 @@ function App() {
   const [paused, setPaused] = useState(false);
   const [timer, setTimer] = useState(0);
   const [timerEndsAt, setTimerEndsAt] = useState(null);
+  const [answerTimeoutSec, setAnswerTimeoutSec] = useState(30);
   const [roundId, setRoundId] = useState(null);
   const [submittedMine, setSubmittedMine] = useState(false);
 
@@ -72,7 +81,7 @@ function App() {
   };
 
   const createRoom = async () => {
-    const r = await fetch(`${API}/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mode }) });
+    const r = await fetch(`${API}/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mode, answerTimeoutSec }) });
     const data = await r.json();
     connectWs(data.code, data.playerId);
   };
@@ -100,6 +109,10 @@ function App() {
             <span>{val.emoji} {val.title}</span><small>{val.desc}</small>
           </button>
         )}</div>
+        <label>Таймер вопроса</label>
+        <select value={answerTimeoutSec} onChange={(e)=>setAnswerTimeoutSec(Number(e.target.value))}>
+          {TIMER_OPTIONS.map((o)=><option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
         <button className='primary' onClick={createRoom} disabled={!name.trim()}>Создать комнату</button>
         <div className='divider'>или</div>
         <input placeholder='Код комнаты' value={roomCodeInput} onChange={(e)=>setRoomCodeInput(e.target.value.toUpperCase())}/>
@@ -118,7 +131,9 @@ function App() {
     {question && !revealed && <div className='glass card in'>
       <div className='badge'>Раунд {room?.round || 1}</div>
       <h2>{question.text}</h2>
-      <div className='timer'><div style={{ width: `${(timer/30)*100}%` }} /></div><p>⏳ {timer} сек</p>
+      {room?.answerTimeoutSec ? <>
+        <div className='timer'><div style={{ width: `${(timer/room.answerTimeoutSec)*100}%` }} /></div><p>⏳ {timer} сек</p>
+      </> : <p>⏳ Без ограничения по времени</p>}
       {question.type === 'choice' && <div className='options'>{question.options.map((o)=><button key={o} className={answer===o?'active':''} onClick={()=>setAnswer(o)}>{o}</button>)}</div>}
       {question.type === 'scale' && <div><input type='range' min='1' max='10' value={answer || 5} onChange={(e)=>setAnswer(e.target.value)} /><p>Оценка: <b>{answer || 5}</b>/10</p></div>}
       {(question.type === 'open' || question.type === 'guess') && <textarea value={answer} onChange={(e)=>setAnswer(e.target.value)} placeholder='Ваш ответ...' />}
