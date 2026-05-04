@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
-const API = 'http://localhost:4000';
+const API = import.meta.env.VITE_API_URL || window.location.origin;
+const WS_URL = (import.meta.env.VITE_WS_URL || window.location.origin).replace('http', 'ws');
 
 function App() {
   const [name, setName] = useState('');
@@ -39,7 +40,7 @@ function App() {
   }, [room]);
 
   const connectWs = (c, p) => {
-    const socket = new WebSocket('ws://localhost:4000');
+    const socket = new WebSocket(WS_URL);
     socket.onopen = () => socket.send(JSON.stringify({ type: 'bind', code: c, playerId: p }));
     setWs(socket); setCode(c); setPlayerId(p);
   };

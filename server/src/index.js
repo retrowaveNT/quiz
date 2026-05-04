@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
@@ -8,6 +10,9 @@ import { QUESTIONS } from './questions.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const rooms = new Map();
 const answerTimeout = 30;
@@ -121,4 +126,12 @@ setInterval(() => {
   }
 }, 1000);
 
-server.listen(4000, () => console.log('Server on http://localhost:4000'));
+const clientDist = path.resolve(__dirname, '../../client/dist');
+app.use(express.static(clientDist));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/rooms') || req.path.startsWith('/health')) return next();
+  res.sendFile(path.join(clientDist, 'index.html'));
+});
+
+const PORT = Number(process.env.PORT || 4000);
+server.listen(PORT, () => console.log(`Server on http://localhost:${PORT}`));
