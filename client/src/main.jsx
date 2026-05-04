@@ -38,17 +38,23 @@ function App() {
   const [answerTimeoutSec, setAnswerTimeoutSec] = useState(30);
   const [roundId, setRoundId] = useState(null);
   const [submittedMine, setSubmittedMine] = useState(false);
+  const [fatalError, setFatalError] = useState('');
 
   useEffect(() => {
     if (!ws) return;
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      if (msg.type === 'room_update') { setRoom(msg.room); if (msg.room?.timerEndsAt) setTimerEndsAt(msg.room.timerEndsAt); }
+      if (msg.type === 'room_update') { setRoom(msg.room); setTimerEndsAt(msg.room?.timerEndsAt || null); }
       if (msg.type === 'round_started') { setQuestion(msg.question); setRevealed(null); setWaiting(false); setAnswer(''); setTimerEndsAt(msg.timerEndsAt); setRoundId(msg.roundId); setSubmittedMine(!!msg.submitted?.[playerId]); }
       if (msg.type === 'waiting_partner') setWaiting(true);
       if (msg.type === 'answers_revealed') { setRevealed(msg); setWaiting(false); setTimerEndsAt(null); setSubmittedMine(false); }
       if (msg.type === 'answer_accepted') setSubmittedMine(true);
       if (msg.type === 'discussion_state') setPaused(msg.value);
+      if (msg.type === 'error') {
+        localStorage.removeItem('couples_quiz_session');
+        setFatalError(msg.message || 'Сессия устарела. Войдите заново.');
+        setCode(''); setPlayerId(''); setRoom(null); setQuestion(null); setRevealed(null);
+      }
     };
   }, [ws]);
 
@@ -75,7 +81,10 @@ function App() {
 
   const connectWs = (c, p) => {
     const socket = new WebSocket(WS_URL);
-    socket.onopen = () => socket.send(JSON.stringify({ type: 'bind', code: c, playerId: p }));
+    socket.onopen = () => { setFatalError(''); socket.send(JSON.stringify({ type: 'bind', code: c, playerId: p })); };
+    socket.onclose = () => {
+      if (c) setFatalError('Соединение потеряно. Обновите комнату или войдите заново.');
+    };
     setWs(socket); setCode(c); setPlayerId(p);
     localStorage.setItem('couples_quiz_session', JSON.stringify({ code: c, playerId: p, name }));
   };
@@ -103,6 +112,7 @@ function App() {
       </div>
 
       <div className='glass'>
+        {fatalError ? <p className='error'>{fatalError}</p> : null}
         <input placeholder='Ваше имя' value={name} onChange={(e)=>setName(e.target.value)} />
         <div className='modeGrid'>{Object.entries(MODES).map(([key, val]) =>
           <button key={key} className={`modeCard ${mode===key?'selected':''}`} onClick={()=>setMode(key)}>
@@ -117,6 +127,7 @@ function App() {
         <div className='divider'>или</div>
         <input placeholder='Код комнаты' value={roomCodeInput} onChange={(e)=>setRoomCodeInput(e.target.value.toUpperCase())}/>
         <button onClick={joinRoom} disabled={!name.trim() || !roomCodeInput}>Присоединиться</button>
+        <button onClick={()=>{ localStorage.removeItem('couples_quiz_session'); setFatalError(''); }}>Сбросить сохранённую сессию</button>
       </div>
     </div>;
   }
@@ -127,6 +138,8 @@ function App() {
       <div><b>{MODES[room?.mode || mode]?.emoji} {MODES[room?.mode || mode]?.title}</b><small>Совпадения: {room?.stats?.matches || 0}/{room?.stats?.total || 0}</small></div>
       <div><b>Участники</b><small>{room?.players?.map((p) => `${p.name}${p.online ? ' 🟢' : ' ⚪'}`).join(' • ') || '—'}</small></div>
     </div>
+
+    {!question && !revealed && <div className='glass card in'><h2>Ожидаем запуск раунда</h2><p>Как только второй игрок подключится или начнётся следующий раунд — вопрос появится автоматически.</p></div>}
 
     {question && !revealed && <div className='glass card in'>
       <div className='badge'>Раунд {room?.round || 1}</div>
