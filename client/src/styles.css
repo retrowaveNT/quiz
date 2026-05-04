@@ -1,0 +1,12 @@
+body { font-family: Inter, system-ui, sans-serif; margin:0; background:#0f1226; color:#fff; }
+.container { max-width: 680px; margin: 0 auto; padding: 20px; display:flex; flex-direction:column; gap:12px; }
+.card { background: #1d2347; border-radius: 16px; padding: 18px; animation: fade .4s ease; }
+input, textarea, select, button { width:100%; padding:12px; border-radius:10px; border:none; margin:4px 0; }
+button { background:#7a5cff; color:#fff; font-weight:600; }
+.options { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.active { background: #f856a9; }
+.pulse { margin-top:8px; animation: pulse 1s infinite; }
+.row{display:flex; gap:8px;} .row button{flex:1}
+@keyframes pulse { 0%{opacity:.4}50%{opacity:1}100%{opacity:.4} }
+@keyframes fade { from{transform:scale(.98); opacity:0} to{transform:scale(1); opacity:1} }
+@media (max-width:600px){ .options{grid-template-columns:1fr;} .container{padding:12px;} }
